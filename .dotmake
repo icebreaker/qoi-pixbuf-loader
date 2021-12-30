@@ -1,0 +1,21 @@
+function build()
+{
+	make
+}
+
+function execute()
+{
+	make test
+}
+
+function generate()
+{
+	echo 'Nothing to generate.'
+}
+
+function clean()
+{
+	make clean
+}
+
+# vim: set ft=bash:
