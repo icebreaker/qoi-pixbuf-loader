@@ -1,9 +1,5 @@
 CFLAGS += -Wall -Wextra -Werror -O2 -Isrc
 
-#ifdef MAX_COLORS
-#CFLAGS += -DMRT_MAX_COLORS=$(MAX_COLORS)
-#endif
-
 TARGET ?= qoi-pixbuf-loader.so
 TARGET_TEST ?= qoi-pixbuf-loader-test
 
@@ -17,8 +13,18 @@ BUILD_TARGET_TEST = $(BUILD_DIR)/$(TARGET_TEST)
 BUILD_TARGET_TEST_LOADER_CACHE = $(BUILD_DIR)/loader.cache
 
 PKG_CONFIG_LIBS = gdk-pixbuf-2.0
-PKG_CONFIG_FLAGS = $(shell pkg-config --cflags --libs $(PKG_CONFIG_LIBS))
+PKG_CONFIG_CFLAGS = $(shell pkg-config --cflags $(PKG_CONFIG_LIBS))
+PKG_CONFIG_LDFLAGS = $(shell pkg-config --libs $(PKG_CONFIG_LIBS))
 PKG_CONFIG_LOADERS_DIR ?= $(shell pkg-config $(PKG_CONFIG_LIBS) --variable=gdk_pixbuf_moduledir)
+
+# FIXME: Figure out a better way to detect this. Multilib on Ubuntu/Debian is a mess!
+# gdk-pixbuf-query-loaders should really be in the PATH and not tucked away in lib ...
+DEB_TARGET_MULTIARCH ?= $(shell dpkg-architecture -q DEB_TARGET_MULTIARCH 2>/dev/null)
+ifeq ($(DEB_TARGET_MULTIARCH),)
+GDK_PIXBUF_QUERY_LOADERS=gdk-pixbuf-query-loaders
+else
+GDK_PIXBUF_QUERY_LOADERS=/usr/lib/$(DEB_TARGET_MULTIARCH)/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders
+endif
 
 TEST_RUNNER=G_MESSAGES_DEBUG=all \
 	GDK_PIXBUF_MODULE_FILE=$(CURDIR)/$(BUILD_TARGET_TEST_LOADER_CACHE) $(BUILD_TARGET_TEST)
@@ -30,13 +36,13 @@ SOURCES_TEST = src/qoi-pixbuf-loader-test.c
 all: $(BUILD_TARGET) $(BUILD_TARGET_TEST)
 
 $(BUILD_TARGET): $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(PKG_CONFIG_FLAGS) -shared $(SOURCES) -o $@
+	$(CC) $(CFLAGS) $(PKG_CONFIG_CFLAGS) -shared $(SOURCES) $(LDFLAGS) $(PKG_CONFIG_LDFLAGS) -o $@
 
 $(BUILD_TARGET_TEST): $(BUILD_TARGET) $(SOURCES_TEST)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(PKG_CONFIG_FLAGS) $(SOURCES_TEST) -o $@
+	$(CC) $(CFLAGS) $(PKG_CONFIG_CFLAGS) $(SOURCES_TEST) $(LDFLAGS) $(PKG_CONFIG_LDFLAGS) -o $@
 
 $(BUILD_TARGET_TEST_LOADER_CACHE): $(BUILD_TARGET)
-	gdk-pixbuf-query-loaders $^ > $@
+	$(GDK_PIXBUF_QUERY_LOADERS) $^ > $@
 
 test: $(BUILD_TARGET_TEST) $(BUILD_TARGET_TEST_LOADER_CACHE)
 	$(TEST_RUNNER) qoi/test.qoi qoi/test_out.qoi qoi/test_callback_out.qoi
@@ -54,7 +60,7 @@ ifeq ($(PKG_CONFIG_LOADERS_DIR),)
 	@echo "Please run 'make install PKG_CONFIG_LOADERS_DIR=/path/to/loaders' again."
 else
 	cp $(BUILD_TARGET) $(PKG_CONFIG_LOADERS_DIR)/$(TARGET)
-	gdk-pixbuf-query-loaders --update-cache
+	$(GDK_PIXBUF_QUERY_LOADERS) --update-cache
 	xdg-mime install --mode system --novendor res/qoi.xml
 	cp res/qoi.thumbnailer $(THUMBNAILER_DIR)/qoi.thumbnailer
 endif
@@ -62,7 +68,7 @@ endif
 uninstall:
 	$(RM) $(THUMBNAILER_DIR)/qoi.thumbnailer
 	$(RM) $(PKG_CONFIG_LOADERS_DIR)/$(TARGET)
-	gdk-pixbuf-query-loaders --update-cache
+	$(GDK_PIXBUF_QUERY_LOADERS) --update-cache
 	xdg-mime uninstall --mode system res/qoi.xml
 
 clean:
