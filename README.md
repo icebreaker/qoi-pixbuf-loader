@@ -18,6 +18,12 @@ $ make test
 $ sudo make install
 ```
 
+If you get errors while running `make test`, try and run `sudo make
+install-mime-type`, which should resolve the issues.
+
+However, if the errors persist even after that, then obviously do not
+attempt to run `sudo make install` as it will surely not work anyway.
+
 Contribute
 ----------
 * Fork the project.

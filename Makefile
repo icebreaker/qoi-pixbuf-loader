@@ -21,10 +21,13 @@ PKG_CONFIG_LOADERS_DIR ?= $(shell pkg-config $(PKG_CONFIG_LIBS) --variable=gdk_p
 # gdk-pixbuf-query-loaders should really be in the PATH and not tucked away in lib ...
 DEB_TARGET_MULTIARCH ?= $(shell dpkg-architecture -q DEB_TARGET_MULTIARCH 2>/dev/null)
 ifeq ($(DEB_TARGET_MULTIARCH),)
-GDK_PIXBUF_QUERY_LOADERS=gdk-pixbuf-query-loaders
+GDK_PIXBUF_QUERY_LOADERS = gdk-pixbuf-query-loaders
 else
-GDK_PIXBUF_QUERY_LOADERS=/usr/lib/$(DEB_TARGET_MULTIARCH)/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders
+GDK_PIXBUF_QUERY_LOADERS = /usr/lib/$(DEB_TARGET_MULTIARCH)/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders
 endif
+
+INSTALL_MIME_TYPE = xdg-mime install --mode system --novendor res/qoi.xml
+UNINSTALL_MIME_TYPE = xdg-mime uninstall --mode system res/qoi.xml
 
 TEST_RUNNER=G_MESSAGES_DEBUG=all \
 	GDK_PIXBUF_MODULE_FILE=$(CURDIR)/$(BUILD_TARGET_TEST_LOADER_CACHE) $(BUILD_TARGET_TEST)
@@ -54,6 +57,12 @@ test: $(BUILD_TARGET_TEST) $(BUILD_TARGET_TEST_LOADER_CACHE)
 	md5sum -c qoi/test_large.md5sum
 	md5sum -c qoi/test_alpha_large.md5sum
 
+install-mime-type:
+	$(INSTALL_MIME_TYPE)
+
+uninstall-mime-type:
+	$(UNINSTALL_MIME_TYPE)
+
 install:
 ifeq ($(PKG_CONFIG_LOADERS_DIR),)
 	@echo "Could not auto-detect the pixbuf loaders directory."
@@ -61,7 +70,7 @@ ifeq ($(PKG_CONFIG_LOADERS_DIR),)
 else
 	cp $(BUILD_TARGET) $(PKG_CONFIG_LOADERS_DIR)/$(TARGET)
 	$(GDK_PIXBUF_QUERY_LOADERS) --update-cache
-	xdg-mime install --mode system --novendor res/qoi.xml
+	$(INSTALL_MIME_TYPE)
 	cp res/qoi.thumbnailer $(THUMBNAILER_DIR)/qoi.thumbnailer
 endif
 
@@ -69,7 +78,7 @@ uninstall:
 	$(RM) $(THUMBNAILER_DIR)/qoi.thumbnailer
 	$(RM) $(PKG_CONFIG_LOADERS_DIR)/$(TARGET)
 	$(GDK_PIXBUF_QUERY_LOADERS) --update-cache
-	xdg-mime uninstall --mode system res/qoi.xml
+	$(UNINSTALL_MIME_TYPE)
 
 clean:
 	$(RM) $(BUILD_TARGET)
