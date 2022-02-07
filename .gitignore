@@ -1,2 +1,4 @@
 /build
 /qoi/*_out.qoi
+/Vagrantfile
+/.vagrant
