@@ -33,7 +33,7 @@ Contribute
 
 License
 -------
-Copyright (c) 2021, Mihail Szabolcs
+Copyright (c) 2021-2022, Mihail Szabolcs
 
 **qoi-pixbuf-loader** is provided **as-is** under the **MIT** license.
 For more information see LICENSE.
